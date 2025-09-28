@@ -27,9 +27,9 @@ export default class MyPlugin extends Plugin {
 		// Perform additional things with the ribbon
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
-		// Add a new ribbon icon to execute echo command
-		const echoRibbonIconEl = this.addRibbonIcon('terminal', 'Execute Echo Command', (_evt: MouseEvent) => {
-			this.executeEchoCommand();
+		// Add a new ribbon icon to execute folder location command
+		const echoRibbonIconEl = this.addRibbonIcon('terminal', 'Show Hexo Folder Location', (_evt: MouseEvent) => {
+			this.executePathCommand();
 		});
 		echoRibbonIconEl.addClass('echo-command-ribbon-class');
 
@@ -121,7 +121,7 @@ export default class MyPlugin extends Plugin {
 	
 	// Method to execute echo command and display result
 	private executeEchoCommand() {
-		exec('echo "hello"', (error, stdout, stderr) => {
+		exec('echo "十堰，北戴河，共青城，秋明，ASN-08217-DAT-3826"', (error, stdout, stderr) => {
 			if (error) {
 				new Notice(`Error: ${error.message}`);
 				return;
@@ -142,19 +142,24 @@ export default class MyPlugin extends Plugin {
 			return;
 		}
 
-		// Execute cd command to navigate to path and pwd to show current path
-		exec(`cd "${this.settings.hexoSourcePath}" && cd`, (error, stdout, stderr) => {
-			if (error) {
-				new Notice(`Error: ${error.message}`);
-				return;
-			}
-			if (stderr) {
-				new Notice(`Stderr: ${stderr}`);
-				return;
-			}
-			// Display current path
-			new Notice(`Current path: ${stdout.trim()}`);
-		});
+		// First, display the current path
+		new Notice(`Current path: ${this.settings.hexoSourcePath}`);
+		
+		// Execute hexo s command in the specified path after 2 seconds delay
+		setTimeout(() => {
+			exec(`cd /d "${this.settings.hexoSourcePath}" && hexo cl && hexo g && hexo d`, (error, stdout, stderr) => {
+				if (error) {
+					new Notice(`Error: ${error.message}`);
+					return;
+				}
+				if (stderr) {
+					new Notice(`Stderr: ${stderr}`);
+					return;
+				}
+				// Display command output
+				new Notice(`Hexo server output: ${stdout.trim()}`);
+			});
+		}, 500);
 	}
 
 	// Command to trigger folder selection
