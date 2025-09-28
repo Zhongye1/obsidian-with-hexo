@@ -19,6 +19,7 @@ const VIEW_TYPE_COMMAND_PROGRESS = "command-progress-view";
 export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
 	private progressView: CommandProgressView | null = null;
+	private serverProcess: ChildProcess | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -67,6 +68,15 @@ export default class MyPlugin extends Plugin {
 			name: 'Create new Hexo post',
 			callback: () => {
 				new NewPostModal(this.app, this).open();
+			}
+		});
+		
+		// Add command to start hexo server
+		this.addCommand({
+			id: 'start-hexo-server',
+			name: 'Start Hexo server',
+			callback: () => {
+				this.startHexoServer();
 			}
 		});
 		
@@ -130,11 +140,24 @@ export default class MyPlugin extends Plugin {
 		this.addRibbonIcon('file-plus', 'Create new Hexo post', (_evt: MouseEvent) => {
 			new NewPostModal(this.app, this).open();
 		});
+		
+		// Add ribbon icon for starting hexo server
+		this.addRibbonIcon('server', 'Start Hexo server', (_evt: MouseEvent) => {
+			this.startHexoServer();
+		});
+		
+		// Add ribbon icon for stopping hexo server
+		this.addRibbonIcon('square', 'Stop Hexo server', (_evt: MouseEvent) => {
+			this.stopHexoServer();
+		});
 
 	}
 
 	onunload() {
-
+		// Kill server process if running
+		if (this.serverProcess) {
+			this.serverProcess.kill();
+		}
 	}
 
 	async loadSettings() {
@@ -162,7 +185,6 @@ export default class MyPlugin extends Plugin {
 	}
 
 	// Method to execute path command in hexo source directory
-	// 修改 executePathCommand 方法
 	private async executePathCommand() {
 		if (!this.settings.hexoSourcePath) {
 			new Notice('Please set Hexo source path in plugin settings');
@@ -182,7 +204,6 @@ export default class MyPlugin extends Plugin {
 		const startTime = Date.now();
 
 		// Execute hexo s command in the specified path after 2 seconds delay
-		// 修改 executePathCommand 方法中的 setTimeout 部分
 		setTimeout(() => {
 			const startTime = Date.now(); // 将 startTime 移到 setTimeout 回调内部
 			progressView.setRunning(true);
@@ -309,6 +330,135 @@ export default class MyPlugin extends Plugin {
 				if (!progressView.getRunning()) return;
 				progressView.updateProgress(`${progressView.getProgressText()}[ERROR] ${data}`);
 			});
+		});
+	}
+
+	// 新增启动 Hexo 服务器的方法
+	public async startHexoServer() {
+		if (!this.settings.hexoSourcePath) {
+			new Notice('Please set Hexo source path in plugin settings');
+			return;
+		}
+		
+		// 如果服务器已在运行，先停止它
+		if (this.serverProcess) {
+			this.serverProcess.kill();
+			this.serverProcess = null;
+		}
+		
+		// Open the progress panel
+		await this.openProgressPanel();
+		
+		const progressView = this.getProgressView();
+		if (!progressView) return;
+		
+		progressView.updateProgress(`Starting Hexo server in path: ${this.settings.hexoSourcePath}\n`);
+		progressView.setRunning(true);
+		
+		const command = `cd /d "${this.settings.hexoSourcePath}" && hexo server`;
+		this.serverProcess = exec(command, (error, stdout, stderr) => {
+			if (!progressView.getRunning()) return;
+			
+			const completionTime = new Date().toLocaleString();
+			
+			if (error) {
+				progressView.updateProgress(
+					`${progressView.getProgressText()}\n` +
+					`<span class="ansi-red">[ERROR]</span> Failed to start Hexo server at ${completionTime}\n` +
+					`<span class="ansi-red">[ERROR] ${error.message}</span>`
+				);
+				progressView.setRunning(false);
+				this.serverProcess = null;
+				return;
+			}
+			
+			if (stderr) {
+				// 服务器正常运行时也会有 stderr 输出，所以我们不把它当作错误处理
+				progressView.updateProgress(
+					`${progressView.getProgressText()}\n` +
+					`<span class="ansi-yellow">[INFO]</span> Server output at ${completionTime}\n` +
+					`Output: ${stderr}`
+				);
+			}
+		});
+		
+		// Capture real-time output
+		this.serverProcess.stdout?.on('data', (data) => {
+			if (!progressView.getRunning()) return;
+			progressView.updateProgress(`${progressView.getProgressText()}${data}`);
+			
+			// 当检测到服务器启动成功的消息时，自动打开浏览器
+			if (data.includes('Hexo is running at') || data.includes('Server running at')) {
+				// 等待几秒确保服务器完全启动
+				setTimeout(() => {
+					window.open('http://localhost:4000', '_blank');
+				}, 2000);
+			}
+		});
+		
+		this.serverProcess.stderr?.on('data', (data) => {
+			if (!progressView.getRunning()) return;
+			progressView.updateProgress(`${progressView.getProgressText()}[ERROR] ${data}`);
+		});
+		
+		// 监听进程关闭事件
+		this.serverProcess.on('close', (code) => {
+			progressView.updateProgress(
+				`${progressView.getProgressText()}\n` +
+				`<span class="ansi-blue">[INFO]</span> Hexo server process closed with code ${code}\n`
+			);
+			progressView.setRunning(false);
+			this.serverProcess = null;
+		});
+	}
+
+	// 新增停止 Hexo 服务器的方法 (使用 cross-port-killer)
+	public async stopHexoServer() {
+		// Open the progress panel
+		await this.openProgressPanel();
+		
+		const progressView = this.getProgressView();
+		if (!progressView) return;
+		
+		progressView.updateProgress(`Stopping Hexo server using cross-port-killer on port 4000\n`);
+		progressView.setRunning(true);
+		
+		// 使用 cross-port-killer 终止占用 4000 端口的进程
+		const command = `npx cross-port-killer 4000`;
+		
+		exec(command, (error, stdout, stderr) => {
+			const completionTime = new Date().toLocaleString();
+			
+			if (error) {
+				progressView.updateProgress(
+					`${progressView.getProgressText()}\n` +
+					`<span class="ansi-red">[ERROR]</span> Failed to stop Hexo server at ${completionTime}\n` +
+					`<span class="ansi-red">[ERROR] ${error.message}</span>`
+				);
+				progressView.setRunning(false);
+				this.serverProcess = null;
+				return;
+			}
+			
+			if (stderr) {
+				progressView.updateProgress(
+					`${progressView.getProgressText()}\n` +
+					`<span class="ansi-yellow">[WARNING]</span> Command completed with stderr at ${completionTime}\n` +
+					`Stderr: ${stderr}`
+				);
+			}
+			
+			// 成功终止进程
+			progressView.updateProgress(
+				`${progressView.getProgressText()}\n` +
+				`<span class="ansi-green">[SUCCESS]</span> Hexo server stopped successfully at ${completionTime}\n` +
+				`${stdout.trim()}`
+			);
+			
+			progressView.setRunning(false);
+			
+			// 清空 serverProcess 引用
+			this.serverProcess = null;
 		});
 	}
 
