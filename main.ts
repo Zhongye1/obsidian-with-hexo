@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, requestUrl } from 'obsidian';
 import { exec } from 'child_process';
 
 // Remember to rename these classes and interfaces!
@@ -95,6 +95,16 @@ export default class MyPlugin extends Plugin {
 
 		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
 		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+		
+		// Add command to open folder selection dialog
+		this.addCommand({
+			id: 'select-hexo-source-folder',
+			name: 'Select Hexo source folder',
+			callback: () => {
+				this.selectFolderCommand();
+			}
+		});
+
 	}
 
 	onunload() {
@@ -147,40 +157,40 @@ export default class MyPlugin extends Plugin {
 		});
 	}
 
-	// Method to select folder using system dialog
-	async selectFolder(): Promise<string|null> {
-		try {
-			// Create a temporary input element to select folder
-			const input = document.createElement("input");
-			input.type = "file";
-			input.webkitdirectory = true;
-			input.style.display = "none";
-			
-			const pathPromise = new Promise<string|null>((resolve) => {
-				input.onchange = () => {
-					if (input.files && input.files.length > 0) {
-						// Get the directory path (not file path)
-						const fullPath = input.files[0].webkitRelativePath;
-						const directoryPath = fullPath.split("/").slice(0, -1).join("/");
+	// Command to trigger folder selection
+	private async selectFolderCommand(): Promise<string|null> {
+		// Create a temporary input element to select folder
+		const input = document.createElement("input");
+		input.type = "file";
+		input.webkitdirectory = true;
+		
+		const pathPromise = new Promise<string|null>((resolve) => {
+			input.onchange = () => {
+				if (input.files && input.files.length > 0) {
+					// For Windows, we need to get the directory path
+					const path = input.files[0].path || '';
+					if (path) {
+						// Extract directory path from file path
+						const pathParts = path.split('\\');
+						const directoryPath = pathParts.slice(0, -1).join('\\');
 						resolve(directoryPath);
 					} else {
 						resolve(null);
 					}
-				};
-				
-				input.oncancel = () => resolve(null);
-			});
+				} else {
+					resolve(null);
+				}
+			};
 			
-			document.body.appendChild(input);
-			input.click();
-			document.body.removeChild(input);
-			
-			return await pathPromise;
-		} catch (error) {
-			new Notice(`Error selecting folder: ${error.message}`);
-			return null;
-		}
+			input.oncancel = () => resolve(null);
+		});
+		
+		input.click();
+		
+		const selectedPath = await pathPromise;
+		return selectedPath;
 	}
+
 }
 
 class SampleModal extends Modal {
@@ -212,16 +222,6 @@ class SampleSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
 
 		new Setting(containerEl)
 			.setName('Hexo Source Path')
@@ -234,13 +234,14 @@ class SampleSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}))
 			.addButton(button => button
-				.setButtonText("Browse")
+				.setButtonText("Select folder")
 				.onClick(async () => {
-					const selectedPath = await this.plugin.selectFolder();
+					const selectedPath = await this.plugin.selectFolderCommand();
 					if (selectedPath) {
 						this.plugin.settings.hexoSourcePath = selectedPath;
 						await this.plugin.saveSettings();
-						this.display(); // Refresh the settings display
+						// Refresh the settings display to show the new path
+						this.display();
 					}
 				}));
 
