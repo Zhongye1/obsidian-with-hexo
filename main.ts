@@ -1,5 +1,5 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, requestUrl } from 'obsidian';
-import { exec } from 'child_process';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, requestUrl, ItemView, WorkspaceLeaf } from 'obsidian';
+import { exec, ChildProcess } from 'child_process';
 
 // Remember to rename these classes and interfaces!
 
@@ -13,8 +13,11 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 	hexoSourcePath: '' // Default empty path
 }
 
+const VIEW_TYPE_COMMAND_PROGRESS = "command-progress-view";
+
 export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
+	private progressView: CommandProgressView | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -84,6 +87,21 @@ export default class MyPlugin extends Plugin {
 			}
 		});
 
+		// Register the progress view
+		this.registerView(
+			VIEW_TYPE_COMMAND_PROGRESS,
+			(leaf) => new CommandProgressView(leaf)
+		);
+
+		// Add command to open progress panel
+		this.addCommand({
+			id: 'open-command-progress-panel',
+			name: 'Open command progress panel',
+			callback: async () => {
+				await this.openProgressPanel();
+			}
+		});
+
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SampleSettingTab(this.app, this));
 
@@ -136,28 +154,52 @@ export default class MyPlugin extends Plugin {
 	}
 
 	// Method to execute path command in hexo source directory
-	private executePathCommand() {
+	private async executePathCommand() {
 		if (!this.settings.hexoSourcePath) {
 			new Notice('Please set Hexo source path in plugin settings');
 			return;
 		}
 
+		// Open the progress panel
+		await this.openProgressPanel();
+		
+		// Get the progress view
+		const progressView = this.getProgressView();
+		if (!progressView) return;
+		
 		// First, display the current path
-		new Notice(`Current path: ${this.settings.hexoSourcePath}`);
+		progressView.updateProgress(`Current path: ${this.settings.hexoSourcePath}\nStarting command execution...`);
 		
 		// Execute hexo s command in the specified path after 2 seconds delay
 		setTimeout(() => {
-			exec(`cd /d "${this.settings.hexoSourcePath}" && hexo cl && hexo g && hexo d`, (error, stdout, stderr) => {
+			progressView.setRunning(true);
+			
+			const command = `cd /d "${this.settings.hexoSourcePath}" && hexo cl && hexo g && hexo d`;
+			const childProcess: ChildProcess = exec(command, (error, stdout, stderr) => {
+				if (!progressView.getRunning()) return;
+				
 				if (error) {
-					new Notice(`Error: ${error.message}`);
+					progressView.updateProgress(`${progressView.getProgressText()}\nError: ${error.message}`);
 					return;
 				}
 				if (stderr) {
-					new Notice(`Stderr: ${stderr}`);
+					progressView.updateProgress(`${progressView.getProgressText()}\nStderr: ${stderr}`);
 					return;
 				}
 				// Display command output
-				new Notice(`Hexo server output: ${stdout.trim()}`);
+				progressView.updateProgress(`${progressView.getProgressText()}\nCommand execution completed: ${stdout.trim()}`);
+				progressView.setRunning(false);
+			});
+			
+			// Capture real-time output
+			childProcess.stdout?.on('data', (data) => {
+				if (!progressView.getRunning()) return;
+				progressView.updateProgress(`${progressView.getProgressText()}${data}`);
+			});
+			
+			childProcess.stderr?.on('data', (data) => {
+				if (!progressView.getRunning()) return;
+				progressView.updateProgress(`${progressView.getProgressText()}[ERROR] ${data}`);
 			});
 		}, 500);
 	}
@@ -196,6 +238,28 @@ export default class MyPlugin extends Plugin {
 		return selectedPath;
 	}
 
+	// Open the progress panel
+	private async openProgressPanel() {
+		this.app.workspace.detachLeavesOfType(VIEW_TYPE_COMMAND_PROGRESS);
+
+		await this.app.workspace.getRightLeaf(false).setViewState({
+			type: VIEW_TYPE_COMMAND_PROGRESS,
+			active: true,
+		});
+
+		this.app.workspace.revealLeaf(
+			this.app.workspace.getLeavesOfType(VIEW_TYPE_COMMAND_PROGRESS)[0]
+		);
+	}
+
+	// Get the progress view
+	private getProgressView(): CommandProgressView | null {
+		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_COMMAND_PROGRESS);
+		if (leaves.length === 0) {
+			return null;
+		}
+		return leaves[0].view as CommandProgressView;
+	}
 }
 
 class SampleModal extends Modal {
@@ -211,6 +275,95 @@ class SampleModal extends Modal {
 	onClose() {
 		const {contentEl} = this;
 		contentEl.empty();
+	}
+}
+
+// View for command progress in the right panel
+class CommandProgressView extends ItemView {
+	private progressText: HTMLElement;
+	private isRunning: boolean = false;
+	private progressContainer: HTMLElement;
+
+	constructor(leaf: WorkspaceLeaf) {
+		super(leaf);
+	}
+
+	getViewType() {
+		return VIEW_TYPE_COMMAND_PROGRESS;
+	}
+
+	getDisplayText() {
+		return "Command Progress";
+	}
+
+	getIcon(): string {
+		return "terminal";
+	}
+
+	async onOpen() {
+		const container = this.containerEl.children[1];
+		container.empty();
+		container.addClass('command-progress-view');
+		
+		// Create header
+		const header = container.createEl("div", { cls: "command-progress-header" });
+		header.createEl("h4", { text: "Command Execution Progress" });
+		
+		// Create progress container
+		this.progressContainer = container.createEl("div", { cls: "command-progress-container" });
+		this.progressText = this.progressContainer.createEl("div", {
+			text: "Ready to execute commands...",
+			attr: {
+				style: "white-space: pre-wrap; font-family: monospace; margin: 1em; min-height: 100px;"
+			}
+		});
+		
+		// Create buttons container
+		const buttonsContainer = container.createEl("div", { cls: "command-progress-buttons" });
+		
+		// Clear button
+		const clearButton = buttonsContainer.createEl("button", { text: "Clear" });
+		clearButton.onclick = () => {
+			this.clearProgress();
+		};
+		
+		// Cancel button
+		const cancelButton = buttonsContainer.createEl("button", { text: "Cancel" });
+		cancelButton.onclick = () => {
+			this.isRunning = false;
+			this.updateProgress(`${this.getProgressText()}\nExecution cancelled by user.`);
+		};
+	}
+
+	async onClose() {
+		// Nothing to clean up
+	}
+	
+	updateProgress(text: string) {
+		if (this.progressText) {
+			this.progressText.setText(text);
+			// Auto scroll to bottom
+			this.progressContainer.scrollTop = this.progressContainer.scrollHeight;
+		}
+	}
+	
+	getProgressText(): string {
+		return this.progressText ? this.progressText.textContent || "" : "";
+	}
+	
+	setRunning(running: boolean) {
+		this.isRunning = running;
+	}
+	
+	getRunning() {
+		return this.isRunning;
+	}
+	
+	clearProgress() {
+		if (this.progressText) {
+			this.progressText.setText("Ready to execute commands...");
+		}
+		this.isRunning = false;
 	}
 }
 
