@@ -48,7 +48,7 @@ export default class MyPlugin extends Plugin {
 				new SampleModal(this.app).open();
 			}
 		});
-		
+
 		// Add command to execute echo "hello" command
 		this.addCommand({
 			id: 'execute-echo-command',
@@ -57,7 +57,7 @@ export default class MyPlugin extends Plugin {
 				this.executeEchoCommand();
 			}
 		});
-		
+
 		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
 			id: 'sample-editor-command',
@@ -113,7 +113,7 @@ export default class MyPlugin extends Plugin {
 
 		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
 		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-		
+
 		// Add command to open folder selection dialog
 		this.addCommand({
 			id: 'select-hexo-source-folder',
@@ -136,7 +136,7 @@ export default class MyPlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
-	
+
 	// Method to execute echo command and display result
 	private executeEchoCommand() {
 		exec('echo "十堰，北戴河，共青城，秋明，ASN-08217-DAT-3826"', (error, stdout, stderr) => {
@@ -162,22 +162,22 @@ export default class MyPlugin extends Plugin {
 
 		// Open the progress panel
 		await this.openProgressPanel();
-		
+
 		// Get the progress view
 		const progressView = this.getProgressView();
 		if (!progressView) return;
-		
+
 		// First, display the current path
 		progressView.updateProgress(`Current path: ${this.settings.hexoSourcePath}\nStarting command execution...`);
-		
+
 		// Execute hexo s command in the specified path after 2 seconds delay
 		setTimeout(() => {
 			progressView.setRunning(true);
-			
+
 			const command = `cd /d "${this.settings.hexoSourcePath}" && hexo cl && hexo g && hexo d`;
 			const childProcess: ChildProcess = exec(command, (error, stdout, stderr) => {
 				if (!progressView.getRunning()) return;
-				
+
 				if (error) {
 					progressView.updateProgress(`${progressView.getProgressText()}\nError: ${error.message}`);
 					return;
@@ -190,13 +190,13 @@ export default class MyPlugin extends Plugin {
 				progressView.updateProgress(`${progressView.getProgressText()}\nCommand execution completed: ${stdout.trim()}`);
 				progressView.setRunning(false);
 			});
-			
+
 			// Capture real-time output
 			childProcess.stdout?.on('data', (data) => {
 				if (!progressView.getRunning()) return;
 				progressView.updateProgress(`${progressView.getProgressText()}${data}`);
 			});
-			
+
 			childProcess.stderr?.on('data', (data) => {
 				if (!progressView.getRunning()) return;
 				progressView.updateProgress(`${progressView.getProgressText()}[ERROR] ${data}`);
@@ -205,13 +205,13 @@ export default class MyPlugin extends Plugin {
 	}
 
 	// Command to trigger folder selection
-	private async selectFolderCommand(): Promise<string|null> {
+	private async selectFolderCommand(): Promise<string | null> {
 		// Create a temporary input element to select folder
 		const input = document.createElement("input");
 		input.type = "file";
 		input.webkitdirectory = true;
-		
-		const pathPromise = new Promise<string|null>((resolve) => {
+
+		const pathPromise = new Promise<string | null>((resolve) => {
 			input.onchange = () => {
 				if (input.files && input.files.length > 0) {
 					// For Windows, we need to get the directory path
@@ -228,12 +228,12 @@ export default class MyPlugin extends Plugin {
 					resolve(null);
 				}
 			};
-			
+
 			input.oncancel = () => resolve(null);
 		});
-		
+
 		input.click();
-		
+
 		const selectedPath = await pathPromise;
 		return selectedPath;
 	}
@@ -268,12 +268,12 @@ class SampleModal extends Modal {
 	}
 
 	onOpen() {
-		const {contentEl} = this;
+		const { contentEl } = this;
 		contentEl.setText('Woah!');
 	}
 
 	onClose() {
-		const {contentEl} = this;
+		const { contentEl } = this;
 		contentEl.empty();
 	}
 }
@@ -304,30 +304,111 @@ class CommandProgressView extends ItemView {
 		const container = this.containerEl.children[1];
 		container.empty();
 		container.addClass('command-progress-view');
-		
-		// Create header
+		container.createEl("style", {
+			text: `
+            .command-progress-view {
+                background-color: #1e1e1e;
+                color: #d4d4d4;
+                font-family: 'Consolas', 'Courier New', monospace;
+                font-size: 14px;
+                line-height: 1.4;
+            }
+            .command-progress-header {
+                background-color: #252526;
+                padding: 8px 12px;
+                border-bottom: 1px solid #3c3c3c;
+            }
+            .command-progress-header h4 {
+                margin: 0;
+                color: #ffffff;
+                font-weight: 500;
+            }
+            .command-progress-container {
+                padding: 12px;
+                height: calc(100% - 120px);
+                overflow-y: auto;
+                background-color: #1e1e1e;
+            }
+            .command-progress-text {
+                white-space: pre-wrap;
+                word-break: break-word;
+            }
+            .command-progress-buttons {
+                padding: 12px;
+                display: flex;
+                gap: 8px;
+                border-top: 1px solid #3c3c3c;
+            }
+            .command-progress-buttons button {
+                background-color: #3c3c3c;
+                color: #ffffff;
+                border: none;
+                padding: 6px 12px;
+                cursor: pointer;
+                border-radius: 2px;
+            }
+            .command-progress-buttons button:hover {
+                background-color: #454545;
+            }
+            /* ANSI 颜色代码支持 */
+            .ansi-black { color: #000000; }
+            .ansi-red { color: #cd3131; }
+            .ansi-green { color: #0dbc79; }
+            .ansi-yellow { color: #e5e510; }
+            .ansi-blue { color: #2472c8; }
+            .ansi-magenta { color: #bc3fbc; }
+            .ansi-cyan { color: #11a8cd; }
+            .ansi-white { color: #e5e5e5; }
+            .ansi-bright-black { color: #666666; }
+            .ansi-bright-red { color: #f14c4c; }
+            .ansi-bright-green { color: #23d18b; }
+            .ansi-bright-yellow { color: #f5f543; }
+            .ansi-bright-blue { color: #3b8eea; }
+            .ansi-bright-magenta { color: #d670d6; }
+            .ansi-bright-cyan { color: #29b8db; }
+            .ansi-bright-white { color: #ffffff; }
+            .ansi-bold { font-weight: bold; }
+            .ansi-underline { text-decoration: underline; }
+            .ansi-bg-black { background-color: #000000; }
+            .ansi-bg-red { background-color: #cd3131; }
+            .ansi-bg-green { background-color: #0dbc79; }
+            .ansi-bg-yellow { background-color: #e5e510; }
+            .ansi-bg-blue { background-color: #2472c8; }
+            .ansi-bg-magenta { background-color: #bc3fbc; }
+            .ansi-bg-cyan { background-color: #11a8cd; }
+            .ansi-bg-white { background-color: #e5e5e5; }
+            .ansi-bg-bright-black { background-color: #666666; }
+            .ansi-bg-bright-red { background-color: #f14c4c; }
+            .ansi-bg-bright-green { background-color: #23d18b; }
+            .ansi-bg-bright-yellow { background-color: #f5f543; }
+            .ansi-bg-bright-blue { background-color: #3b8eea; }
+            .ansi-bg-bright-magenta { background-color: #d670d6; }
+            .ansi-bg-bright-cyan { background-color: #29b8db; }
+            .ansi-bg-bright-white { background-color: #ffffff; }
+        `
+		});
+
+		// 创建头部
 		const header = container.createEl("div", { cls: "command-progress-header" });
 		header.createEl("h4", { text: "Command Execution Progress" });
-		
-		// Create progress container
+
+		// 创建进度容器
 		this.progressContainer = container.createEl("div", { cls: "command-progress-container" });
 		this.progressText = this.progressContainer.createEl("div", {
-			text: "Ready to execute commands...",
-			attr: {
-				style: "white-space: pre-wrap; font-family: monospace; margin: 1em; min-height: 100px;"
-			}
+			cls: "command-progress-text",
+			text: "Ready to execute commands..."
 		});
-		
-		// Create buttons container
+
+		// 创建按钮容器
 		const buttonsContainer = container.createEl("div", { cls: "command-progress-buttons" });
-		
-		// Clear button
+
+		// 清除按钮
 		const clearButton = buttonsContainer.createEl("button", { text: "Clear" });
 		clearButton.onclick = () => {
 			this.clearProgress();
 		};
-		
-		// Cancel button
+
+		// 取消按钮
 		const cancelButton = buttonsContainer.createEl("button", { text: "Cancel" });
 		cancelButton.onclick = () => {
 			this.isRunning = false;
@@ -338,33 +419,140 @@ class CommandProgressView extends ItemView {
 	async onClose() {
 		// Nothing to clean up
 	}
-	
+
+	private parseAnsiEscapeCodes(text: string): string {
+		const ansiColorMap: Record<number, string> = {
+			30: 'ansi-black',
+			31: 'ansi-red',
+			32: 'ansi-green',
+			33: 'ansi-yellow',
+			34: 'ansi-blue',
+			35: 'ansi-magenta',
+			36: 'ansi-cyan',
+			37: 'ansi-white',
+			90: 'ansi-bright-black',
+			91: 'ansi-bright-red',
+			92: 'ansi-bright-green',
+			93: 'ansi-bright-yellow',
+			94: 'ansi-bright-blue',
+			95: 'ansi-bright-magenta',
+			96: 'ansi-bright-cyan',
+			97: 'ansi-bright-white'
+		};
+
+		const ansiBgColorMap: Record<number, string> = {
+			40: 'ansi-bg-black',
+			41: 'ansi-bg-red',
+			42: 'ansi-bg-green',
+			43: 'ansi-bg-yellow',
+			44: 'ansi-bg-blue',
+			45: 'ansi-bg-magenta',
+			46: 'ansi-bg-cyan',
+			47: 'ansi-bg-white',
+			100: 'ansi-bg-bright-black',
+			101: 'ansi-bg-bright-red',
+			102: 'ansi-bg-bright-green',
+			103: 'ansi-bg-bright-yellow',
+			104: 'ansi-bg-bright-blue',
+			105: 'ansi-bg-bright-magenta',
+			106: 'ansi-bg-bright-cyan',
+			107: 'ansi-bg-bright-white'
+		};
+
+		let result = text;
+		let openSpan = false;
+		let currentClasses: string[] = [];
+
+		result = result.replace(/\x1b\[([0-9;]*)m/g, (match, p1) => {
+			const codes = p1 ? p1.split(';').map(Number) : [0];
+			let styleClasses: string[] = [...currentClasses];
+			let changed = false;
+
+			for (const code of codes) {
+				if (code === 0) { // reset
+					const closeTag = openSpan ? '</span>' : '';
+					openSpan = false;
+					currentClasses = [];
+					return closeTag;
+				}
+
+				if (ansiColorMap[code]) {
+					styleClasses = styleClasses.filter(cls => !cls.startsWith('ansi-') || cls.includes('-bg-'));
+					styleClasses.push(ansiColorMap[code]);
+					changed = true;
+				}
+
+				if (ansiBgColorMap[code]) {
+					styleClasses = styleClasses.filter(cls => !cls.includes('-bg-'));
+					styleClasses.push(ansiBgColorMap[code]);
+					changed = true;
+				}
+
+				if (code === 1) {
+					if (!styleClasses.includes('ansi-bold')) {
+						styleClasses.push('ansi-bold');
+						changed = true;
+					}
+				}
+
+				if (code === 4) {
+					if (!styleClasses.includes('ansi-underline')) {
+						styleClasses.push('ansi-underline');
+						changed = true;
+					}
+				}
+			}
+
+			if (changed) {
+				const closeTag = openSpan ? '</span>' : '';
+				openSpan = true;
+				currentClasses = styleClasses;
+				return `${closeTag}<span class="${styleClasses.join(' ')}">`;
+			}
+
+			// 对于未识别的 ANSI 代码，返回空字符串以过滤掉它们
+			return '';
+		});
+
+		if (openSpan) {
+			result += '</span>';
+		}
+
+		return result.replace(/\n/g, '<br>');
+	}
+
+
+	// 更新 updateProgress 方法
 	updateProgress(text: string) {
 		if (this.progressText) {
-			this.progressText.setText(text);
-			// Auto scroll to bottom
+			const formattedText = this.parseAnsiEscapeCodes(text);
+			this.progressText.innerHTML = formattedText;
+
+			// 自动滚动到底部
 			this.progressContainer.scrollTop = this.progressContainer.scrollHeight;
 		}
 	}
-	
+
 	getProgressText(): string {
-		return this.progressText ? this.progressText.textContent || "" : "";
+		return this.progressText ? this.progressText.innerHTML || "" : "";
 	}
-	
+
 	setRunning(running: boolean) {
 		this.isRunning = running;
 	}
-	
+
 	getRunning() {
 		return this.isRunning;
 	}
-	
+
+	// 在 CommandProgressView 类中替换 clearProgress 方法
 	clearProgress() {
 		if (this.progressText) {
-			this.progressText.setText("Ready to execute commands...");
+			this.progressText.innerHTML = "Ready to execute commands...";
 		}
 		this.isRunning = false;
 	}
+
 }
 
 class SampleSettingTab extends PluginSettingTab {
@@ -376,7 +564,7 @@ class SampleSettingTab extends PluginSettingTab {
 	}
 
 	display(): void {
-		const {containerEl} = this;
+		const { containerEl } = this;
 
 		containerEl.empty();
 
