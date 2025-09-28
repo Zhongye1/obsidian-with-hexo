@@ -154,6 +154,7 @@ export default class MyPlugin extends Plugin {
 	}
 
 	// Method to execute path command in hexo source directory
+	// 修改 executePathCommand 方法
 	private async executePathCommand() {
 		if (!this.settings.hexoSourcePath) {
 			new Notice('Please set Hexo source path in plugin settings');
@@ -170,24 +171,53 @@ export default class MyPlugin extends Plugin {
 		// First, display the current path
 		progressView.updateProgress(`Current path: ${this.settings.hexoSourcePath}\nStarting command execution...`);
 
+		const startTime = Date.now();
+
 		// Execute hexo s command in the specified path after 2 seconds delay
+		// 修改 executePathCommand 方法中的 setTimeout 部分
 		setTimeout(() => {
+			const startTime = Date.now(); // 将 startTime 移到 setTimeout 回调内部
 			progressView.setRunning(true);
 
 			const command = `cd /d "${this.settings.hexoSourcePath}" && hexo cl && hexo g && hexo d`;
 			const childProcess: ChildProcess = exec(command, (error, stdout, stderr) => {
 				if (!progressView.getRunning()) return;
 
+				const completionTime = new Date().toLocaleString();
+				const executionTime = Date.now() - startTime;
+
 				if (error) {
-					progressView.updateProgress(`${progressView.getProgressText()}\nError: ${error.message}`);
+					progressView.updateProgress(
+						`${progressView.getProgressText()}\n` +
+						`<span class="ansi-red">[ERROR]</span> Command execution failed at ${completionTime}\n` +
+						`Execution time: ${executionTime}ms\n` +
+						`<span class="ansi-red">[ERROR]  ${error.message}</span>`
+					);
 					return;
 				}
+
 				if (stderr) {
-					progressView.updateProgress(`${progressView.getProgressText()}\nStderr: ${stderr}`);
-					return;
+					progressView.updateProgress(
+						`${progressView.getProgressText()}\n` +
+						`<span class="ansi-yellow">[WARNING]</span> Command completed with stderr at ${completionTime}\n` +
+						`Execution time: ${executionTime}ms\n` +
+						`Stderr: ${stderr}`
+					);
+					// 注意：这里不返回，因为stderr不一定是致命错误
 				}
+
 				// Display command output
-				progressView.updateProgress(`${progressView.getProgressText()}\nCommand execution completed: ${stdout.trim()}`);
+				progressView.updateProgress(
+					`${progressView.getProgressText()}\n` +
+					`<span class="ansi-green">[SUCCESS]</span> Command execution completed at ${completionTime}\n` +
+					`<span class="ansi-green">[SUCCESS]</span> Execution time: ${executionTime}ms\n\n\n\n` +
+					`<span class="ansi-blue">[INFO]</span> dev by zhongye` +
+					` <img src="https://avatars.githubusercontent.com/u/145737758?v=4" alt="avatar" style="width:40px;height:40px">\n` +
+					`<span class="ansi-blue">[INFO]</span> Blog: https://zhongye1.github.io/ \n` +
+					`<span class="ansi-blue">[INFO]</span> Github: https://github.com/Zhongye1/ \n`
+
+					//`${stdout.trim() ? 'Output:\n' + stdout.trim() : 'No output'}`
+				);
 				progressView.setRunning(false);
 			});
 
