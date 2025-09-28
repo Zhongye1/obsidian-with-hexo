@@ -64,6 +64,7 @@ export default class MyPlugin extends Plugin {
 			}
 		});
 
+
 		// Add command to create new hexo post
 		this.addCommand({
 			id: 'create-new-hexo-post',
@@ -73,6 +74,7 @@ export default class MyPlugin extends Plugin {
 			}
 		});
 
+
 		// Add command to start hexo server
 		this.addCommand({
 			id: 'start-hexo-server',
@@ -81,6 +83,7 @@ export default class MyPlugin extends Plugin {
 				this.startHexoServer();
 			}
 		});
+
 
 		// This adds a complex command that can check whether the current state of the app allows execution of the command
 		this.addCommand({
@@ -138,15 +141,18 @@ export default class MyPlugin extends Plugin {
 			}
 		});
 
+
 		// Add ribbon icon for creating new post
 		this.addRibbonIcon('file-plus-2', 'Create new Hexo post', (_evt: MouseEvent) => {
 			new NewPostModal(this.app, this).open();
 		});
 
+
 		// Add ribbon icon for starting hexo server
 		this.addRibbonIcon('monitor-play', 'Start Hexo server', (_evt: MouseEvent) => {
 			this.startHexoServer();
 		});
+
 
 		// Add ribbon icon for stopping hexo server
 		this.addRibbonIcon('octagon-pause', 'Stop Hexo server', (_evt: MouseEvent) => {
@@ -269,6 +275,7 @@ export default class MyPlugin extends Plugin {
 		}, 500);
 	}
 
+
 	// 新增创建文章的方法
 	public createNewPost(title: string) {
 		if (!this.settings.hexoSourcePath) {
@@ -276,23 +283,29 @@ export default class MyPlugin extends Plugin {
 			return;
 		}
 
+
 		// Format the post title with current date
 		const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
 		const formattedTitle = `${currentDate}-${title}`;
+
 
 		// Open the progress panel
 		this.openProgressPanel().then(() => {
 			const progressView = this.getProgressView();
 			if (!progressView) return;
 
+
 			progressView.updateProgress(`Creating new post with title: ${formattedTitle}\n`);
 			progressView.setRunning(true);
+
 
 			const command = `cd /d "${this.settings.hexoSourcePath}" && hexo n "${formattedTitle}"`;
 			const childProcess: ChildProcess = exec(command, (error, stdout, stderr) => {
 				if (!progressView.getRunning()) return;
 
+
 				const completionTime = new Date().toLocaleString();
+
 
 				if (error) {
 					progressView.updateProgress(
@@ -304,6 +317,7 @@ export default class MyPlugin extends Plugin {
 					return;
 				}
 
+
 				if (stderr) {
 					progressView.updateProgress(
 						`${progressView.getProgressText()}\n` +
@@ -311,6 +325,7 @@ export default class MyPlugin extends Plugin {
 						`Stderr: ${stderr}`
 					);
 				}
+
 
 				// Display success message
 				progressView.updateProgress(
@@ -322,11 +337,13 @@ export default class MyPlugin extends Plugin {
 				new Notice(`Successfully created new post: ${formattedTitle}`);
 			});
 
+
 			// Capture real-time output
 			childProcess.stdout?.on('data', (data) => {
 				if (!progressView.getRunning()) return;
 				progressView.updateProgress(`${progressView.getProgressText()}${data}`);
 			});
+
 
 			childProcess.stderr?.on('data', (data) => {
 				if (!progressView.getRunning()) return;
@@ -342,26 +359,33 @@ export default class MyPlugin extends Plugin {
 			return;
 		}
 
+
 		// 如果服务器已在运行，先停止它
 		if (this.serverProcess) {
 			this.serverProcess.kill();
 			this.serverProcess = null;
 		}
 
+
 		// Open the progress panel
 		await this.openProgressPanel();
+
 
 		const progressView = this.getProgressView();
 		if (!progressView) return;
 
+
 		progressView.updateProgress(`Starting Hexo server in path: ${this.settings.hexoSourcePath}\n`);
 		progressView.setRunning(true);
+
 
 		const command = `cd /d "${this.settings.hexoSourcePath}" && hexo server`;
 		this.serverProcess = exec(command, (error, stdout, stderr) => {
 			if (!progressView.getRunning()) return;
 
+
 			const completionTime = new Date().toLocaleString();
+
 
 			if (error) {
 				progressView.updateProgress(
@@ -374,6 +398,7 @@ export default class MyPlugin extends Plugin {
 				return;
 			}
 
+
 			if (stderr) {
 				// 服务器正常运行时也会有 stderr 输出，所以我们不把它当作错误处理
 				progressView.updateProgress(
@@ -384,10 +409,12 @@ export default class MyPlugin extends Plugin {
 			}
 		});
 
+
 		// Capture real-time output
 		this.serverProcess.stdout?.on('data', (data) => {
 			if (!progressView.getRunning()) return;
 			progressView.updateProgress(`${progressView.getProgressText()}${data}`);
+
 
 			// 当检测到服务器启动成功的消息时，自动打开浏览器
 			if (data.includes('Hexo is running at') || data.includes('Server running at')) {
@@ -398,10 +425,12 @@ export default class MyPlugin extends Plugin {
 			}
 		});
 
+
 		this.serverProcess.stderr?.on('data', (data) => {
 			if (!progressView.getRunning()) return;
 			progressView.updateProgress(`${progressView.getProgressText()}[ERROR] ${data}`);
 		});
+
 
 		// 监听进程关闭事件
 		this.serverProcess.on('close', (code) => {
@@ -419,17 +448,22 @@ export default class MyPlugin extends Plugin {
 		// Open the progress panel
 		await this.openProgressPanel();
 
+
 		const progressView = this.getProgressView();
 		if (!progressView) return;
+
 
 		progressView.updateProgress(`Stopping Hexo server using cross-port-killer on port 4000\n`);
 		progressView.setRunning(true);
 
+
 		// 使用 cross-port-killer 终止占用 4000 端口的进程
 		const command = `npx cross-port-killer 4000`;
 
+
 		exec(command, (error, stdout, stderr) => {
 			const completionTime = new Date().toLocaleString();
+
 
 			if (error) {
 				progressView.updateProgress(
@@ -442,6 +476,7 @@ export default class MyPlugin extends Plugin {
 				return;
 			}
 
+
 			if (stderr) {
 				progressView.updateProgress(
 					`${progressView.getProgressText()}\n` +
@@ -450,6 +485,7 @@ export default class MyPlugin extends Plugin {
 				);
 			}
 
+
 			// 成功终止进程
 			progressView.updateProgress(
 				`${progressView.getProgressText()}\n` +
@@ -457,7 +493,9 @@ export default class MyPlugin extends Plugin {
 				`${stdout.trim()}`
 			);
 
+
 			progressView.setRunning(false);
+
 
 			// 清空 serverProcess 引用
 			this.serverProcess = null;
