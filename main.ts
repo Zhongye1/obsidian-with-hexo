@@ -1,13 +1,16 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { exec } from 'child_process';
 
 // Remember to rename these classes and interfaces!
 
 interface MyPluginSettings {
 	mySetting: string;
+	hexoSourcePath: string; // Add hexo source path setting
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+	mySetting: 'default',
+	hexoSourcePath: '' // Default empty path
 }
 
 export default class MyPlugin extends Plugin {
@@ -24,6 +27,12 @@ export default class MyPlugin extends Plugin {
 		// Perform additional things with the ribbon
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
+		// Add a new ribbon icon to execute echo command
+		const echoRibbonIconEl = this.addRibbonIcon('terminal', 'Execute Echo Command', (_evt: MouseEvent) => {
+			this.executeEchoCommand();
+		});
+		echoRibbonIconEl.addClass('echo-command-ribbon-class');
+
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
 		const statusBarItemEl = this.addStatusBarItem();
 		statusBarItemEl.setText('Status Bar Text');
@@ -36,6 +45,16 @@ export default class MyPlugin extends Plugin {
 				new SampleModal(this.app).open();
 			}
 		});
+		
+		// Add command to execute echo "hello" command
+		this.addCommand({
+			id: 'execute-echo-command',
+			name: 'Execute echo "hello" command',
+			callback: () => {
+				this.executeEchoCommand();
+			}
+		});
+		
 		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
 			id: 'sample-editor-command',
@@ -89,6 +108,79 @@ export default class MyPlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
+	
+	// Method to execute echo command and display result
+	private executeEchoCommand() {
+		exec('echo "hello"', (error, stdout, stderr) => {
+			if (error) {
+				new Notice(`Error: ${error.message}`);
+				return;
+			}
+			if (stderr) {
+				new Notice(`Stderr: ${stderr}`);
+				return;
+			}
+			// Display command output
+			new Notice(`Output: ${stdout.trim()}`);
+		});
+	}
+
+	// Method to execute path command in hexo source directory
+	private executePathCommand() {
+		if (!this.settings.hexoSourcePath) {
+			new Notice('Please set Hexo source path in plugin settings');
+			return;
+		}
+
+		// Execute cd command to navigate to path and pwd to show current path
+		exec(`cd "${this.settings.hexoSourcePath}" && cd`, (error, stdout, stderr) => {
+			if (error) {
+				new Notice(`Error: ${error.message}`);
+				return;
+			}
+			if (stderr) {
+				new Notice(`Stderr: ${stderr}`);
+				return;
+			}
+			// Display current path
+			new Notice(`Current path: ${stdout.trim()}`);
+		});
+	}
+
+	// Method to select folder using system dialog
+	async selectFolder(): Promise<string|null> {
+		try {
+			// Create a temporary input element to select folder
+			const input = document.createElement("input");
+			input.type = "file";
+			input.webkitdirectory = true;
+			input.style.display = "none";
+			
+			const pathPromise = new Promise<string|null>((resolve) => {
+				input.onchange = () => {
+					if (input.files && input.files.length > 0) {
+						// Get the directory path (not file path)
+						const fullPath = input.files[0].webkitRelativePath;
+						const directoryPath = fullPath.split("/").slice(0, -1).join("/");
+						resolve(directoryPath);
+					} else {
+						resolve(null);
+					}
+				};
+				
+				input.oncancel = () => resolve(null);
+			});
+			
+			document.body.appendChild(input);
+			input.click();
+			document.body.removeChild(input);
+			
+			return await pathPromise;
+		} catch (error) {
+			new Notice(`Error selecting folder: ${error.message}`);
+			return null;
+		}
+	}
 }
 
 class SampleModal extends Modal {
@@ -129,6 +221,36 @@ class SampleSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.mySetting = value;
 					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Hexo Source Path')
+			.setDesc('Select the path to your Hexo source folder')
+			.addText(text => text
+				.setPlaceholder('Enter path to Hexo source folder')
+				.setValue(this.plugin.settings.hexoSourcePath)
+				.onChange(async (value) => {
+					this.plugin.settings.hexoSourcePath = value;
+					await this.plugin.saveSettings();
+				}))
+			.addButton(button => button
+				.setButtonText("Browse")
+				.onClick(async () => {
+					const selectedPath = await this.plugin.selectFolder();
+					if (selectedPath) {
+						this.plugin.settings.hexoSourcePath = selectedPath;
+						await this.plugin.saveSettings();
+						this.display(); // Refresh the settings display
+					}
+				}));
+
+		new Setting(containerEl)
+			.setName('Execute Path Command')
+			.setDesc('Run command in the specified Hexo source path')
+			.addButton(button => button
+				.setButtonText("Execute")
+				.onClick(() => {
+					this.plugin.executePathCommand();
 				}));
 	}
 }
