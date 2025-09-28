@@ -868,34 +868,44 @@ class SampleSettingTab extends PluginSettingTab {
 
 
 		new Setting(containerEl)
-			.setName('Hexo Source Path')
-			.setDesc('Select the path to your Hexo source folder')
+			.setName('Hexo 路径')
+			.setDesc('选择你的 Hexo 博客路径')
 			.addText(text => text
-				.setPlaceholder('Enter path to Hexo source folder')
+				.setPlaceholder('输入 Hexo 源码文件夹路径')
 				.setValue(this.plugin.settings.hexoSourcePath)
 				.onChange(async (value) => {
 					this.plugin.settings.hexoSourcePath = value;
 					await this.plugin.saveSettings();
 				}))
 			.addButton(button => button
-				.setButtonText("Select folder")
+				.setButtonText("选择文件夹")
 				.onClick(async () => {
 					const selectedPath = await this.plugin.selectFolderCommand();
 					if (selectedPath) {
 						this.plugin.settings.hexoSourcePath = selectedPath;
 						await this.plugin.saveSettings();
-						// Refresh the settings display to show the new path
+						// 刷新设置显示以展示新路径
 						this.display();
 					}
 				}));
 
 		new Setting(containerEl)
-			.setName('Execute Path Command')
-			.setDesc('Run command in the specified Hexo source path')
+			.setName('Hexo 部署')
+			.setDesc('在指定的 Hexo 源码文件夹中执行 hexo clean、hexo generate 和 hexo deploy 命令，用于清理缓存、重新生成静态文件并部署到远程服务器')
 			.addButton(button => button
-				.setButtonText("Execute")
+				.setButtonText("执行")
 				.onClick(() => {
 					this.plugin.executePathCommand();
+				}));
+
+		// 在 SampleSettingTab 类的 display() 方法中添加以下代码
+		new Setting(containerEl)
+			.setName('查看文档')
+			.setDesc('打开插件的 GitHub 仓库页面查看详细说明')
+			.addButton(button => button
+				.setButtonText("打开文档")
+				.onClick(() => {
+					window.open('https://github.com/Zhongye1/obsidian-with-hexo', '_blank');
 				}));
 	}
 }
