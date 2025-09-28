@@ -1,11 +1,10 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "obsidian-with-hexo",
+	"name": "Obsidian with Hexo",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
-	"isDesktopOnly": false
+	"description": "一个将 Obsidian 笔记同步至 Hexo 博客系统的插件。",
+	"author": "Your Name or Team Name",
+	"authorUrl": "https://zhongye1.github.io/",
+	"isDesktopOnly": true
 }
