@@ -1,5 +1,6 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, requestUrl, ItemView, WorkspaceLeaf } from 'obsidian';
 import { exec, ChildProcess } from 'child_process';
+import { NewPostModal } from './src/NewPostModal';
 
 // Remember to rename these classes and interfaces!
 
@@ -21,14 +22,6 @@ export default class MyPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (_evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
 		// Add a new ribbon icon to execute folder location command
 		const echoRibbonIconEl = this.addRibbonIcon('terminal', 'Show Hexo Folder Location', (_evt: MouseEvent) => {
@@ -67,6 +60,16 @@ export default class MyPlugin extends Plugin {
 				editor.replaceSelection('Sample Editor Command');
 			}
 		});
+		
+		// Add command to create new hexo post
+		this.addCommand({
+			id: 'create-new-hexo-post',
+			name: 'Create new Hexo post',
+			callback: () => {
+				new NewPostModal(this.app, this).open();
+			}
+		});
+		
 		// This adds a complex command that can check whether the current state of the app allows execution of the command
 		this.addCommand({
 			id: 'open-sample-modal-complex',
@@ -121,6 +124,11 @@ export default class MyPlugin extends Plugin {
 			callback: () => {
 				this.selectFolderCommand();
 			}
+		});
+		
+		// Add ribbon icon for creating new post
+		this.addRibbonIcon('file-plus', 'Create new Hexo post', (_evt: MouseEvent) => {
+			new NewPostModal(this.app, this).open();
 		});
 
 	}
@@ -210,7 +218,11 @@ export default class MyPlugin extends Plugin {
 				progressView.updateProgress(
 					`${progressView.getProgressText()}\n` +
 					`<span class="ansi-green">[SUCCESS]</span> Command execution completed at ${completionTime}\n` +
-					`<span class="ansi-green">[SUCCESS]</span> Execution time: ${executionTime}ms\n\n\n\n` +
+					`<span class="ansi-green">[SUCCESS]</span> Execution time: ${executionTime}ms
+
+
+
+` +
 					`<span class="ansi-blue">[INFO]</span> dev by zhongye` +
 					` <img src="https://avatars.githubusercontent.com/u/145737758?v=4" alt="avatar" style="width:40px;height:40px">\n` +
 					`<span class="ansi-blue">[INFO]</span> Blog: https://zhongye1.github.io/ \n` +
@@ -232,6 +244,72 @@ export default class MyPlugin extends Plugin {
 				progressView.updateProgress(`${progressView.getProgressText()}[ERROR] ${data}`);
 			});
 		}, 500);
+	}
+	
+	// 新增创建文章的方法
+	public createNewPost(title: string) {
+		if (!this.settings.hexoSourcePath) {
+			new Notice('Please set Hexo source path in plugin settings');
+			return;
+		}
+		
+		// Format the post title with current date
+		const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+		const formattedTitle = `${currentDate}-${title}`;
+		
+		// Open the progress panel
+		this.openProgressPanel().then(() => {
+			const progressView = this.getProgressView();
+			if (!progressView) return;
+			
+			progressView.updateProgress(`Creating new post with title: ${formattedTitle}\n`);
+			progressView.setRunning(true);
+			
+			const command = `cd /d "${this.settings.hexoSourcePath}" && hexo n "${formattedTitle}"`;
+			const childProcess: ChildProcess = exec(command, (error, stdout, stderr) => {
+				if (!progressView.getRunning()) return;
+				
+				const completionTime = new Date().toLocaleString();
+				
+				if (error) {
+					progressView.updateProgress(
+						`${progressView.getProgressText()}\n` +
+						`<span class="ansi-red">[ERROR]</span> Failed to create post at ${completionTime}\n` +
+						`<span class="ansi-red">[ERROR] ${error.message}</span>`
+					);
+					progressView.setRunning(false);
+					return;
+				}
+				
+				if (stderr) {
+					progressView.updateProgress(
+						`${progressView.getProgressText()}\n` +
+						`<span class="ansi-yellow">[WARNING]</span> Command completed with stderr at ${completionTime}\n` +
+						`Stderr: ${stderr}`
+					);
+				}
+				
+				// Display success message
+				progressView.updateProgress(
+					`${progressView.getProgressText()}\n` +
+					`<span class="ansi-green">[SUCCESS]</span> Created new post at ${completionTime}\n` +
+					`${stdout.trim()}`
+				);
+				progressView.setRunning(false);
+				new Notice(`Successfully created new post: ${formattedTitle}`);
+			});
+			
+			// Capture real-time output
+			childProcess.stdout?.on('data', (data) => {
+				if (!progressView.getRunning()) return;
+				progressView.updateProgress(`${progressView.getProgressText()}${data}`);
+			});
+			
+			childProcess.stderr?.on('data', (data) => {
+				if (!progressView.getRunning()) return;
+				progressView.updateProgress(`${progressView.getProgressText()}[ERROR] ${data}`);
+			});
+		});
 	}
 
 	// Command to trigger folder selection
