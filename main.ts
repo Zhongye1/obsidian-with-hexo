@@ -193,7 +193,7 @@ export default class MyPlugin extends Plugin {
 	}
 
 	// Method to execute path command in hexo source directory
-	private async executePathCommand() {
+	public async executePathCommand() {
 		if (!this.settings.hexoSourcePath) {
 			new Notice('Please set Hexo source path in plugin settings');
 			return;
@@ -503,7 +503,7 @@ export default class MyPlugin extends Plugin {
 	}
 
 	// Command to trigger folder selection
-	private async selectFolderCommand(): Promise<string | null> {
+	public async selectFolderCommand(): Promise<string | null> {
 		// Create a temporary input element to select folder
 		const input = document.createElement("input");
 		input.type = "file";
@@ -512,22 +512,39 @@ export default class MyPlugin extends Plugin {
 		const pathPromise = new Promise<string | null>((resolve) => {
 			input.onchange = () => {
 				if (input.files && input.files.length > 0) {
-					// For Windows, we need to get the directory path
-					const path = input.files[0].path || '';
-					if (path) {
-						// Extract directory path from file path
-						const pathParts = path.split('\\');
-						const directoryPath = pathParts.slice(0, -1).join('\\');
-						resolve(directoryPath);
+					// 获取选中文件夹的路径
+					// 在现代浏览器中，我们可以通过其他方式获取路径
+					// 我们使用第一个文件的webkitRelativePath来推断目录路径
+					const firstFile = input.files[0];
+					if ('webkitRelativePath' in firstFile) {
+						// Extract directory path from webkitRelativePath
+						const relativePath = (firstFile as any).webkitRelativePath;
+						if (relativePath) {
+							// Split path and remove filename to get directory
+							const pathParts = relativePath.split('/');
+							const directoryPath = pathParts.slice(0, -1).join('/');
+							resolve(directoryPath);
+						} else {
+							resolve(null);
+						}
 					} else {
-						resolve(null);
+						// Fallback: try to get path from the file input's value (may not work due to security restrictions)
+						const path = (input as any).value || '';
+						if (path) {
+							// Extract directory path from file path
+							const pathParts = path.split('\\'); // Windows path separator
+							const directoryPath = pathParts.slice(0, -1).join('\\');
+							resolve(directoryPath);
+						} else {
+							resolve(null);
+						}
 					}
 				} else {
 					resolve(null);
 				}
 			};
 
-			input.oncancel = () => resolve(null);
+			input.onblur = () => resolve(null);
 		});
 
 		input.click();
@@ -540,14 +557,17 @@ export default class MyPlugin extends Plugin {
 	private async openProgressPanel() {
 		this.app.workspace.detachLeavesOfType(VIEW_TYPE_COMMAND_PROGRESS);
 
-		await this.app.workspace.getRightLeaf(false).setViewState({
-			type: VIEW_TYPE_COMMAND_PROGRESS,
-			active: true,
-		});
+		const rightLeaf = this.app.workspace.getRightLeaf(false);
+		if (rightLeaf) {
+			await rightLeaf.setViewState({
+				type: VIEW_TYPE_COMMAND_PROGRESS,
+				active: true,
+			});
 
-		this.app.workspace.revealLeaf(
-			this.app.workspace.getLeavesOfType(VIEW_TYPE_COMMAND_PROGRESS)[0]
-		);
+			this.app.workspace.revealLeaf(
+				this.app.workspace.getLeavesOfType(VIEW_TYPE_COMMAND_PROGRESS)[0]
+			);
+		}
 	}
 
 	// Get the progress view
@@ -579,7 +599,7 @@ class SampleModal extends Modal {
 // View for command progress in the right panel
 class CommandProgressView extends ItemView {
 	private progressText: HTMLElement;
-	private isRunning: boolean = false;
+	private isRunning = false;
 	private progressContainer: HTMLElement;
 
 	constructor(leaf: WorkspaceLeaf) {

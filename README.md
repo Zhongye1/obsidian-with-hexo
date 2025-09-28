@@ -44,8 +44,9 @@
 ## 作者信息
 
 dev by Zhongye
-🌐 博客: [https://zhongye1.github.io/](https://zhongye1.github.io/)  
-👨‍💻 GitHub: [https://github.com/Zhongye1](https://github.com/Zhongye1)
+
+博客: [https://zhongye1.github.io/](https://zhongye1.github.io/)  
+GitHub: [https://github.com/Zhongye1](https://github.com/Zhongye1)
 
 ## 支持项目
 
