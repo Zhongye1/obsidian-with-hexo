@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, requestUrl, ItemView, WorkspaceLeaf } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, ItemView, WorkspaceLeaf } from 'obsidian';
 import { exec, ChildProcess } from 'child_process';
 import { NewPostModal } from './src/NewPostModal';
 
@@ -209,7 +209,7 @@ export default class MyPlugin extends Plugin {
 		// First, display the current path
 		progressView.updateProgress(`Current path: ${this.settings.hexoSourcePath}\nStarting command execution...`);
 
-		const startTime = Date.now();
+		//const startTime = Date.now();
 
 		// Execute hexo s command in the specified path after 2 seconds delay
 		setTimeout(() => {
