@@ -1,9 +1,9 @@
 {
-	"id": "obsidian-with-hexo",
-	"name": "Obsidian with Hexo",
-	"version": "1.0.0",
+	"id": "hexo-notes-publisher",
+	"name": "Hexo Notes Publisher",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
-	"description": "一个将 Obsidian 笔记同步至 Hexo 博客系统的插件。",
+	"description": "Effortlessly manage Hexo blog posts with visual operations and automatic repository push functionality.",
 	"author": "Zhongye1",
 	"authorUrl": "https://zhongye1.github.io/",
 	"isDesktopOnly": true
