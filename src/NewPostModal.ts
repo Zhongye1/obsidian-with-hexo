@@ -1,11 +1,11 @@
 import { App, Modal, Setting } from 'obsidian';
-import MyPlugin from '../main';
+import HexoPublisherPlugin from '../main';
 
 export class NewPostModal extends Modal {
-	plugin: MyPlugin;
+	plugin: HexoPublisherPlugin;
 	title: string;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: HexoPublisherPlugin) {
 		super(app);
 		this.plugin = plugin;
 		this.title = '';

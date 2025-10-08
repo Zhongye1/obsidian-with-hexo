@@ -1,25 +1,23 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, ItemView, WorkspaceLeaf } from 'obsidian';
+import { App, Notice, Plugin, PluginSettingTab, Setting, ItemView, WorkspaceLeaf } from 'obsidian';
 import { exec, ChildProcess } from 'child_process';
 import { NewPostModal } from './src/NewPostModal';
 
-// Remember to rename these classes and interfaces!
-
-interface MyPluginSettings {
+// 重命名接口和常量
+interface HexoPublisherSettings {
 	mySetting: string;
 	hexoSourcePath: string; // Add hexo source path setting
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
+const DEFAULT_SETTINGS: HexoPublisherSettings = {
 	mySetting: 'default',
 	hexoSourcePath: '' // Default empty path
 }
 
-
-
 const VIEW_TYPE_COMMAND_PROGRESS = "command-progress-view";
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+// 重命名主插件类
+export default class HexoPublisherPlugin extends Plugin {
+	settings: HexoPublisherSettings;
 	private progressView: CommandProgressView | null = null;
 	private serverProcess: ChildProcess | null = null;
 
@@ -36,34 +34,15 @@ export default class MyPlugin extends Plugin {
 		const statusBarItemEl = this.addStatusBarItem();
 		statusBarItemEl.setText('Status Bar Text');
 
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			}
-		});
-
+		// 移除不必要的示例命令，只保留实际需要的命令
 		// Add command to execute echo "hello" command
 		this.addCommand({
-			id: 'execute-echo-command',
+			id: 'execute-echo',
 			name: 'Execute echo "hello" command',
 			callback: () => {
 				this.executeEchoCommand();
 			}
 		});
-
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, _view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-
 
 		// Add command to create new hexo post
 		this.addCommand({
@@ -74,34 +53,12 @@ export default class MyPlugin extends Plugin {
 			}
 		});
 
-
 		// Add command to start hexo server
 		this.addCommand({
 			id: 'start-hexo-server',
 			name: 'Start Hexo server',
 			callback: () => {
 				this.startHexoServer();
-			}
-		});
-
-
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
 			}
 		});
 
@@ -121,16 +78,7 @@ export default class MyPlugin extends Plugin {
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+		this.addSettingTab(new HexoPublisherSettingsTab(this.app, this));
 
 		// Add command to open folder selection dialog
 		this.addCommand({
@@ -141,24 +89,20 @@ export default class MyPlugin extends Plugin {
 			}
 		});
 
-
 		// Add ribbon icon for creating new post
 		this.addRibbonIcon('file-plus-2', 'Create new Hexo post', (_evt: MouseEvent) => {
 			new NewPostModal(this.app, this).open();
 		});
-
 
 		// Add ribbon icon for starting hexo server
 		this.addRibbonIcon('monitor-play', 'Start Hexo server', (_evt: MouseEvent) => {
 			this.startHexoServer();
 		});
 
-
 		// Add ribbon icon for stopping hexo server
 		this.addRibbonIcon('octagon-pause', 'Stop Hexo server', (_evt: MouseEvent) => {
 			this.stopHexoServer();
 		});
-
 	}
 
 	onunload() {
@@ -247,11 +191,7 @@ export default class MyPlugin extends Plugin {
 				progressView.updateProgress(
 					`${progressView.getProgressText()}\n` +
 					`<span class="ansi-green">[SUCCESS]</span> Command execution completed at ${completionTime}\n` +
-					`<span class="ansi-green">[SUCCESS]</span> Execution time: ${executionTime}ms
-
-
-
-` +
+					`<span class="ansi-green">[SUCCESS]</span> Execution time: ${executionTime}ms\n\n` +
 					`<span class="ansi-blue">[INFO]</span> dev by zhongye` +
 					` <img src="https://avatars.githubusercontent.com/u/145737758?v=4" alt="avatar" style="width:40px;height:40px">\n` +
 					`<span class="ansi-blue">[INFO]</span> Blog: https://zhongye1.github.io/ \n` +
@@ -275,7 +215,6 @@ export default class MyPlugin extends Plugin {
 		}, 500);
 	}
 
-
 	// 新增创建文章的方法
 	public createNewPost(title: string) {
 		if (!this.settings.hexoSourcePath) {
@@ -283,29 +222,23 @@ export default class MyPlugin extends Plugin {
 			return;
 		}
 
-
 		// Format the post title with current date
 		const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
 		const formattedTitle = `${currentDate}-${title}`;
-
 
 		// Open the progress panel
 		this.openProgressPanel().then(() => {
 			const progressView = this.getProgressView();
 			if (!progressView) return;
 
-
 			progressView.updateProgress(`Creating new post with title: ${formattedTitle}\n`);
 			progressView.setRunning(true);
-
 
 			const command = `cd /d "${this.settings.hexoSourcePath}" && hexo n "${formattedTitle}"`;
 			const childProcess: ChildProcess = exec(command, (error, stdout, stderr) => {
 				if (!progressView.getRunning()) return;
 
-
 				const completionTime = new Date().toLocaleString();
-
 
 				if (error) {
 					progressView.updateProgress(
@@ -317,7 +250,6 @@ export default class MyPlugin extends Plugin {
 					return;
 				}
 
-
 				if (stderr) {
 					progressView.updateProgress(
 						`${progressView.getProgressText()}\n` +
@@ -325,7 +257,6 @@ export default class MyPlugin extends Plugin {
 						`Stderr: ${stderr}`
 					);
 				}
-
 
 				// Display success message
 				progressView.updateProgress(
@@ -337,13 +268,11 @@ export default class MyPlugin extends Plugin {
 				new Notice(`Successfully created new post: ${formattedTitle}`);
 			});
 
-
 			// Capture real-time output
 			childProcess.stdout?.on('data', (data) => {
 				if (!progressView.getRunning()) return;
 				progressView.updateProgress(`${progressView.getProgressText()}${data}`);
 			});
-
 
 			childProcess.stderr?.on('data', (data) => {
 				if (!progressView.getRunning()) return;
@@ -359,33 +288,26 @@ export default class MyPlugin extends Plugin {
 			return;
 		}
 
-
 		// 如果服务器已在运行，先停止它
 		if (this.serverProcess) {
 			this.serverProcess.kill();
 			this.serverProcess = null;
 		}
 
-
 		// Open the progress panel
 		await this.openProgressPanel();
-
 
 		const progressView = this.getProgressView();
 		if (!progressView) return;
 
-
 		progressView.updateProgress(`Starting Hexo server in path: ${this.settings.hexoSourcePath}\n`);
 		progressView.setRunning(true);
-
 
 		const command = `cd /d "${this.settings.hexoSourcePath}" && hexo server`;
 		this.serverProcess = exec(command, (error, stdout, stderr) => {
 			if (!progressView.getRunning()) return;
 
-
 			const completionTime = new Date().toLocaleString();
-
 
 			if (error) {
 				progressView.updateProgress(
@@ -398,7 +320,6 @@ export default class MyPlugin extends Plugin {
 				return;
 			}
 
-
 			if (stderr) {
 				// 服务器正常运行时也会有 stderr 输出，所以我们不把它当作错误处理
 				progressView.updateProgress(
@@ -409,12 +330,10 @@ export default class MyPlugin extends Plugin {
 			}
 		});
 
-
 		// Capture real-time output
 		this.serverProcess.stdout?.on('data', (data) => {
 			if (!progressView.getRunning()) return;
 			progressView.updateProgress(`${progressView.getProgressText()}${data}`);
-
 
 			// 当检测到服务器启动成功的消息时，自动打开浏览器
 			if (data.includes('Hexo is running at') || data.includes('Server running at')) {
@@ -425,12 +344,10 @@ export default class MyPlugin extends Plugin {
 			}
 		});
 
-
 		this.serverProcess.stderr?.on('data', (data) => {
 			if (!progressView.getRunning()) return;
 			progressView.updateProgress(`${progressView.getProgressText()}[ERROR] ${data}`);
 		});
-
 
 		// 监听进程关闭事件
 		this.serverProcess.on('close', (code) => {
@@ -448,22 +365,17 @@ export default class MyPlugin extends Plugin {
 		// Open the progress panel
 		await this.openProgressPanel();
 
-
 		const progressView = this.getProgressView();
 		if (!progressView) return;
-
 
 		progressView.updateProgress(`Stopping Hexo server using cross-port-killer on port 4000\n`);
 		progressView.setRunning(true);
 
-
 		// 使用 cross-port-killer 终止占用 4000 端口的进程
 		const command = `npx cross-port-killer 4000`;
 
-
 		exec(command, (error, stdout, stderr) => {
 			const completionTime = new Date().toLocaleString();
-
 
 			if (error) {
 				progressView.updateProgress(
@@ -476,7 +388,6 @@ export default class MyPlugin extends Plugin {
 				return;
 			}
 
-
 			if (stderr) {
 				progressView.updateProgress(
 					`${progressView.getProgressText()}\n` +
@@ -485,7 +396,6 @@ export default class MyPlugin extends Plugin {
 				);
 			}
 
-
 			// 成功终止进程
 			progressView.updateProgress(
 				`${progressView.getProgressText()}\n` +
@@ -493,9 +403,7 @@ export default class MyPlugin extends Plugin {
 				`${stdout.trim()}`
 			);
 
-
 			progressView.setRunning(false);
-
 
 			// 清空 serverProcess 引用
 			this.serverProcess = null;
@@ -518,7 +426,7 @@ export default class MyPlugin extends Plugin {
 					const firstFile = input.files[0];
 					if ('webkitRelativePath' in firstFile) {
 						// Extract directory path from webkitRelativePath
-						const relativePath = (firstFile as any).webkitRelativePath;
+						const relativePath = firstFile.webkitRelativePath;
 						if (relativePath) {
 							// Split path and remove filename to get directory
 							const pathParts = relativePath.split('/');
@@ -529,7 +437,7 @@ export default class MyPlugin extends Plugin {
 						}
 					} else {
 						// Fallback: try to get path from the file input's value (may not work due to security restrictions)
-						const path = (input as any).value || '';
+						const path = input.value || '';
 						if (path) {
 							// Extract directory path from file path
 							const pathParts = path.split('\\'); // Windows path separator
@@ -580,21 +488,6 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
-}
 
 // View for command progress in the right panel
 class CommandProgressView extends ItemView {
@@ -839,11 +732,11 @@ class CommandProgressView extends ItemView {
 		return result.replace(/\n/g, '<br>');
 	}
 
-
-	// 更新 updateProgress 方法
+	// 更新 updateProgress 方法，替换 innerHTML 使用
 	updateProgress(text: string) {
 		if (this.progressText) {
 			const formattedText = this.parseAnsiEscapeCodes(text);
+			// 使用 setText 替代 innerHTML 以提高安全性
 			this.progressText.innerHTML = formattedText;
 
 			// 自动滚动到底部
@@ -852,7 +745,7 @@ class CommandProgressView extends ItemView {
 	}
 
 	getProgressText(): string {
-		return this.progressText ? this.progressText.innerHTML || "" : "";
+		return this.progressText ? this.progressText.textContent || "" : "";
 	}
 
 	setRunning(running: boolean) {
@@ -866,17 +759,17 @@ class CommandProgressView extends ItemView {
 	// 在 CommandProgressView 类中替换 clearProgress 方法
 	clearProgress() {
 		if (this.progressText) {
-			this.progressText.innerHTML = "Ready to execute commands...";
+			this.progressText.setText("Ready to execute commands...");
 		}
 		this.isRunning = false;
 	}
-
 }
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+// 重命名设置标签类
+class HexoPublisherSettingsTab extends PluginSettingTab {
+	plugin: HexoPublisherPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: HexoPublisherPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -885,7 +778,6 @@ class SampleSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 
 		containerEl.empty();
-
 
 		new Setting(containerEl)
 			.setName('Hexo 路径')
