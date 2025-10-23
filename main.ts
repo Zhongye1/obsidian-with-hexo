@@ -46,7 +46,7 @@ export default class HexoPublisherPlugin extends Plugin {
 
 		// Add command to create new hexo post
 		this.addCommand({
-			id: 'create-new-hexo-post',
+			id: 'create-new-hexo',
 			name: 'Create new Hexo post',
 			callback: () => {
 				new NewPostModal(this.app, this).open();
@@ -55,7 +55,7 @@ export default class HexoPublisherPlugin extends Plugin {
 
 		// Add command to start hexo server
 		this.addCommand({
-			id: 'start-hexo-server',
+			id: 'start-hexo',
 			name: 'Start Hexo server',
 			callback: () => {
 				this.startHexoServer();
@@ -70,7 +70,7 @@ export default class HexoPublisherPlugin extends Plugin {
 
 		// Add command to open progress panel
 		this.addCommand({
-			id: 'open-command-progress-panel',
+			id: 'open-progress',
 			name: 'Open command progress panel',
 			callback: async () => {
 				await this.openProgressPanel();
@@ -82,7 +82,7 @@ export default class HexoPublisherPlugin extends Plugin {
 
 		// Add command to open folder selection dialog
 		this.addCommand({
-			id: 'select-hexo-source-folder',
+			id: 'select-hexo-folder',
 			name: 'Select Hexo source folder',
 			callback: () => {
 				this.selectFolderCommand();
@@ -170,9 +170,9 @@ export default class HexoPublisherPlugin extends Plugin {
 				if (error) {
 					progressView.updateProgress(
 						`${progressView.getProgressText()}\n` +
-						`<span class="ansi-red">[ERROR]</span> Command execution failed at ${completionTime}\n` +
+						`[ERROR] Command execution failed at ${completionTime}\n` +
 						`Execution time: ${executionTime}ms\n` +
-						`<span class="ansi-red">[ERROR]  ${error.message}</span>`
+						`[ERROR]  ${error.message}`
 					);
 					return;
 				}
@@ -180,7 +180,7 @@ export default class HexoPublisherPlugin extends Plugin {
 				if (stderr) {
 					progressView.updateProgress(
 						`${progressView.getProgressText()}\n` +
-						`<span class="ansi-yellow">[WARNING]</span> Command completed with stderr at ${completionTime}\n` +
+						`[WARNING] Command completed with stderr at ${completionTime}\n` +
 						`Execution time: ${executionTime}ms\n` +
 						`Stderr: ${stderr}`
 					);
@@ -190,12 +190,12 @@ export default class HexoPublisherPlugin extends Plugin {
 				// Display command output
 				progressView.updateProgress(
 					`${progressView.getProgressText()}\n` +
-					`<span class="ansi-green">[SUCCESS]</span> Command execution completed at ${completionTime}\n` +
-					`<span class="ansi-green">[SUCCESS]</span> Execution time: ${executionTime}ms\n\n` +
-					`<span class="ansi-blue">[INFO]</span> dev by zhongye` +
-					` <img src="https://avatars.githubusercontent.com/u/145737758?v=4" alt="avatar" style="width:40px;height:40px">\n` +
-					`<span class="ansi-blue">[INFO]</span> Blog: https://zhongye1.github.io/ \n` +
-					`<span class="ansi-blue">[INFO]</span> Github: https://github.com/Zhongye1/ \n`
+					`[SUCCESS] Command execution completed at ${completionTime}\n` +
+					`[SUCCESS] Execution time: ${executionTime}ms\n\n` +
+					`[INFO] dev by zhongye` +
+					//` <img src="https://avatars.githubusercontent.com/u/145737758?v=4" alt="avatar" style="width:40px;height:40px">\n` +
+					`[INFO] Blog: https://zhongye1.github.io/ \n` +
+					`[INFO] Github: https://github.com/Zhongye1/ \n`
 
 					//`${stdout.trim() ? 'Output:\n' + stdout.trim() : 'No output'}`
 				);
@@ -234,8 +234,8 @@ export default class HexoPublisherPlugin extends Plugin {
 			progressView.updateProgress(`Creating new post with title: ${formattedTitle}\n`);
 			progressView.setRunning(true);
 
-			const command = `cd /d "${this.settings.hexoSourcePath}" && hexo n "${formattedTitle}"`;
-			const childProcess: ChildProcess = exec(command, (error, stdout, stderr) => {
+			const comd = `cd /d "${this.settings.hexoSourcePath}" && hexo n "${formattedTitle}"`;
+			const childProcess: ChildProcess = exec(comd, (error, stdout, stderr) => {
 				if (!progressView.getRunning()) return;
 
 				const completionTime = new Date().toLocaleString();
@@ -243,8 +243,8 @@ export default class HexoPublisherPlugin extends Plugin {
 				if (error) {
 					progressView.updateProgress(
 						`${progressView.getProgressText()}\n` +
-						`<span class="ansi-red">[ERROR]</span> Failed to create post at ${completionTime}\n` +
-						`<span class="ansi-red">[ERROR] ${error.message}</span>`
+						`[ERROR] Failed to create post at ${completionTime}\n` +
+						`[ERROR] ${error.message}`
 					);
 					progressView.setRunning(false);
 					return;
@@ -253,7 +253,7 @@ export default class HexoPublisherPlugin extends Plugin {
 				if (stderr) {
 					progressView.updateProgress(
 						`${progressView.getProgressText()}\n` +
-						`<span class="ansi-yellow">[WARNING]</span> Command completed with stderr at ${completionTime}\n` +
+						`[WARNING] Command completed with stderr at ${completionTime}\n` +
 						`Stderr: ${stderr}`
 					);
 				}
@@ -261,7 +261,7 @@ export default class HexoPublisherPlugin extends Plugin {
 				// Display success message
 				progressView.updateProgress(
 					`${progressView.getProgressText()}\n` +
-					`<span class="ansi-green">[SUCCESS]</span> Created new post at ${completionTime}\n` +
+					`[SUCCESS] Created new post at ${completionTime}\n` +
 					`${stdout.trim()}`
 				);
 				progressView.setRunning(false);
@@ -312,8 +312,8 @@ export default class HexoPublisherPlugin extends Plugin {
 			if (error) {
 				progressView.updateProgress(
 					`${progressView.getProgressText()}\n` +
-					`<span class="ansi-red">[ERROR]</span> Failed to start Hexo server at ${completionTime}\n` +
-					`<span class="ansi-red">[ERROR] ${error.message}</span>`
+					`[ERROR] Failed to start Hexo server at ${completionTime}\n` +
+					`[ERROR] ${error.message}`
 				);
 				progressView.setRunning(false);
 				this.serverProcess = null;
@@ -324,7 +324,7 @@ export default class HexoPublisherPlugin extends Plugin {
 				// 服务器正常运行时也会有 stderr 输出，所以我们不把它当作错误处理
 				progressView.updateProgress(
 					`${progressView.getProgressText()}\n` +
-					`<span class="ansi-yellow">[INFO]</span> Server output at ${completionTime}\n` +
+					`[INFO] Server output at ${completionTime}\n` +
 					`Output: ${stderr}`
 				);
 			}
@@ -353,7 +353,7 @@ export default class HexoPublisherPlugin extends Plugin {
 		this.serverProcess.on('close', (code) => {
 			progressView.updateProgress(
 				`${progressView.getProgressText()}\n` +
-				`<span class="ansi-blue">[INFO]</span> Hexo server process closed with code ${code}\n`
+				`[INFO] Hexo server process closed with code ${code}\n`
 			);
 			progressView.setRunning(false);
 			this.serverProcess = null;
@@ -380,8 +380,8 @@ export default class HexoPublisherPlugin extends Plugin {
 			if (error) {
 				progressView.updateProgress(
 					`${progressView.getProgressText()}\n` +
-					`<span class="ansi-red">[ERROR]</span> Failed to stop Hexo server at ${completionTime}\n` +
-					`<span class="ansi-red">[ERROR] ${error.message}</span>`
+					`[ERROR] Failed to stop Hexo server at ${completionTime}\n` +
+					`[ERROR] ${error.message}`
 				);
 				progressView.setRunning(false);
 				this.serverProcess = null;
@@ -391,7 +391,7 @@ export default class HexoPublisherPlugin extends Plugin {
 			if (stderr) {
 				progressView.updateProgress(
 					`${progressView.getProgressText()}\n` +
-					`<span class="ansi-yellow">[WARNING]</span> Command completed with stderr at ${completionTime}\n` +
+					`[WARNING] Command completed with stderr at ${completionTime}\n` +
 					`Stderr: ${stderr}`
 				);
 			}
@@ -399,7 +399,7 @@ export default class HexoPublisherPlugin extends Plugin {
 			// 成功终止进程
 			progressView.updateProgress(
 				`${progressView.getProgressText()}\n` +
-				`<span class="ansi-green">[SUCCESS]</span> Hexo server stopped successfully at ${completionTime}\n` +
+				`[SUCCESS] Hexo server stopped successfully at ${completionTime}\n` +
 				`${stdout.trim()}`
 			);
 
@@ -631,7 +631,7 @@ class CommandProgressView extends ItemView {
 		// Nothing to clean up
 	}
 
-	private parseAnsiEscapeCodes(text: string): string {
+	private parseAnsiEscapeCodes(text: string): HTMLElement {
 		const ansiColorMap: Record<number, string> = {
 			30: 'ansi-black',
 			31: 'ansi-red',
@@ -670,74 +670,55 @@ class CommandProgressView extends ItemView {
 			107: 'ansi-bg-bright-white'
 		};
 
-		let result = text;
-		let openSpan = false;
-		let currentClasses: string[] = [];
+		// 创建一个容器元素
+		const container = createDiv();
+		let currentElement = container.createSpan({ text: '' });
 
-		result = result.replace(/\x1b\[([0-9;]*)m/g, (match, p1) => {
-			const codes = p1 ? p1.split(';').map(Number) : [0];
-			let styleClasses: string[] = [...currentClasses];
-			let changed = false;
+		// 分割文本为ANSI代码和普通文本部分
+		const parts = text.split(/(\x1b\[[0-9;]*m)/g);
 
-			for (const code of codes) {
-				if (code === 0) { // reset
-					const closeTag = openSpan ? '</span>' : '';
-					openSpan = false;
-					currentClasses = [];
-					return closeTag;
-				}
+		for (const part of parts) {
+			if (part.startsWith('\x1b[')) {
+				// 处理 ANSI 代码
+				const match = part.match(/\x1b\[([0-9;]*)m/);
+				if (match) {
+					const codes = match[1] ? match[1].split(';').map(Number) : [0];
 
-				if (ansiColorMap[code]) {
-					styleClasses = styleClasses.filter(cls => !cls.startsWith('ansi-') || cls.includes('-bg-'));
-					styleClasses.push(ansiColorMap[code]);
-					changed = true;
-				}
-
-				if (ansiBgColorMap[code]) {
-					styleClasses = styleClasses.filter(cls => !cls.includes('-bg-'));
-					styleClasses.push(ansiBgColorMap[code]);
-					changed = true;
-				}
-
-				if (code === 1) {
-					if (!styleClasses.includes('ansi-bold')) {
-						styleClasses.push('ansi-bold');
-						changed = true;
+					for (const code of codes) {
+						if (code === 0) {
+							// 重置格式
+							currentElement = container.createSpan({ text: '' });
+						} else if (ansiColorMap[code]) {
+							// 文字颜色
+							currentElement.addClass(ansiColorMap[code]);
+						} else if (ansiBgColorMap[code]) {
+							// 背景颜色
+							currentElement.addClass(ansiBgColorMap[code]);
+						} else if (code === 1) {
+							// 粗体
+							currentElement.addClass('ansi-bold');
+						} else if (code === 4) {
+							// 下划线
+							currentElement.addClass('ansi-underline');
+						}
 					}
 				}
-
-				if (code === 4) {
-					if (!styleClasses.includes('ansi-underline')) {
-						styleClasses.push('ansi-underline');
-						changed = true;
-					}
-				}
+			} else {
+				// 普通文本部分
+				currentElement.appendText(part);
 			}
-
-			if (changed) {
-				const closeTag = openSpan ? '</span>' : '';
-				openSpan = true;
-				currentClasses = styleClasses;
-				return `${closeTag}<span class="${styleClasses.join(' ')}">`;
-			}
-
-			// 对于未识别的 ANSI 代码，返回空字符串以过滤掉它们
-			return '';
-		});
-
-		if (openSpan) {
-			result += '</span>';
 		}
 
-		return result.replace(/\n/g, '<br>');
+		return container;
 	}
 
 	// 更新 updateProgress 方法，替换 innerHTML 使用
 	updateProgress(text: string) {
 		if (this.progressText) {
-			const formattedText = this.parseAnsiEscapeCodes(text);
-			// 使用 setText 替代 innerHTML 以提高安全性
-			this.progressText.innerHTML = formattedText;
+			// 使用更安全的 DOM API 替代 innerHTML
+			this.progressText.empty();
+			const formattedContent = this.parseAnsiEscapeCodes(text);
+			this.progressText.appendChild(formattedContent);
 
 			// 自动滚动到底部
 			this.progressContainer.scrollTop = this.progressContainer.scrollHeight;
@@ -759,7 +740,9 @@ class CommandProgressView extends ItemView {
 	// 在 CommandProgressView 类中替换 clearProgress 方法
 	clearProgress() {
 		if (this.progressText) {
-			this.progressText.setText("Ready to execute commands...");
+			// 使用更安全的 textContent 替代 innerHTML
+			this.progressText.empty();
+			this.progressText.createDiv({ text: "Ready to execute commands..." });
 		}
 		this.isRunning = false;
 	}
